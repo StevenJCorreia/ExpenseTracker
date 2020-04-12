@@ -9,14 +9,4 @@
         android:orderInCategory="1"
         android:title="@string/action_categories"
         app:showAsAction="never" />
-    <item
-        android:id="@+id/action_sort"
-        android:orderInCategory="2"
-        android:title="@string/action_sort"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/action_delete_expenses"
-        android:orderInCategory="3"
-        android:title="@string/action_delete_expenses"
-        app:showAsAction="never" />
 </menu>

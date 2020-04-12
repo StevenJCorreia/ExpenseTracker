@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/sortDialogTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:paddingVertical="5dp"
+        android:text="@string/sort_dialog_title" />
+
+    <RadioButton
+        android:id="@+id/categoryAscendingRadio"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:paddingVertical="5dp"
+        android:text="@string/name_ascending" />
+
+    <RadioButton
+        android:id="@+id/categoryDescendingRadio"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:paddingVertical="5dp"
+        android:text="@string/name_descending" />
+
+    <RadioButton
+        android:id="@+id/dateAscendingRadio"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:paddingVertical="5dp"
+        android:text="@string/date_ascending" />
+
+    <RadioButton
+        android:id="@+id/dateDescendingRadio"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:paddingVertical="5dp"
+        android:text="@string/date_descending" />
+
+    <RadioButton
+        android:id="@+id/priceDescendingRadio"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:paddingVertical="5dp"
+        android:text="@string/price_ascending" />
+
+    <RadioButton
+        android:id="@+id/priceAscendingRadio"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:paddingVertical="5dp"
+        android:text="@string/price_descending" />
+
+</LinearLayout>
