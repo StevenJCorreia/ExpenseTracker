@@ -45,17 +45,7 @@ public class ExpenseItemAdapter extends RecyclerView.Adapter<ExpenseItemHolder> 
         holder.expenseCategory.setText(expenseItems.get(position).getCategory());
         holder.expenseDate.setText(expenseItems.get(position).getDate());
 
-        if (imported) {
-            holder.setItemClickListener(new ExpenseClickListener() {
-                @Override
-                public void onExpenseClickListener(View v, int position) {
-                    // TODO - Implement activity that displays enlarged picture of clicked expense
-                    // Intent intent = new Intent(context, ImageActivity.class);
-                    // intent.putExtra("image", expenseItems.get(position).getImage()); // relative path to image?
-                    // context.startActivity(intent);
-                }
-            });
-        } else {
+        if (!imported) {
             holder.setItemClickListener(new ExpenseClickListener() {
                 @Override
                 public void onExpenseClickListener(View v, int position) {

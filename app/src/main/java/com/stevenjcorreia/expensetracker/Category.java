@@ -11,6 +11,7 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Comparator;
 
+// TODO - Grab categories from imported or accidentally deleted categories?
 class Category {
     private static final String TAG = Category.class.getName();
 
@@ -51,7 +52,7 @@ class Category {
             if (inputStream != null) {
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
                 BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-                String line = "";
+                String line;
 
                 while ((line = bufferedReader.readLine()) != null) {
                     if (!line.isEmpty()) {

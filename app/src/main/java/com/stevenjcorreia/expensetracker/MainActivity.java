@@ -1,9 +1,11 @@
 package com.stevenjcorreia.expensetracker;
 
+import android.app.DatePickerDialog;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -22,30 +24,43 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.room.Room;
 
 import android.provider.DocumentsContract;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.RadioButton;
 import android.widget.SearchView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import org.florescu.android.rangeseekbar.RangeSeekBar;
+
+import java.math.RoundingMode;
+import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
 
 // TODO - Query Room database asynchronously to avoid UI lock up
 // TODO - Sort the newly added expense automatically so user doesn't have to re-select sort from popup dialog
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements DatePickerDialog.OnDateSetListener {
     private static ArrayList<ExpenseItem> expenseList = new ArrayList<>();
-    private static Comparator<ExpenseItem> sortType = null;
+    private Comparator<ExpenseItem> sortType = null;
     private ExpenseItemDatabase database = null;
     private Context context = this;
+    private int backCount = 0;
 
     private RecyclerView recyclerView;
     private ExpenseItemAdapter adapter;
+
+    MenuItem cancelFilter;
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -104,7 +119,20 @@ public class MainActivity extends AppCompatActivity {
                         dialog.dismiss();
                     }
                 });
+                break;
+        }
+    }
 
+    @Override
+    public void onBackPressed() {
+        switch (backCount) {
+            case 0:
+                backCount++;
+                Toast.makeText(context, "Press back again to go home.", Toast.LENGTH_LONG).show();
+                break;
+            case 1:
+                backCount = 0;
+                super.onBackPressed();
                 break;
         }
     }
@@ -116,6 +144,8 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        sortType = getSortType();
+
         database = Room.databaseBuilder(getApplicationContext(), ExpenseItemDatabase.class, "Expense").allowMainThreadQueries().build();
 
         recyclerView = findViewById(R.id.recyclerView);
@@ -123,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
 
         expenseList = (ArrayList<ExpenseItem>) database.expenseItemDao().getExpenses();
 
-        adapter = new ExpenseItemAdapter(this, expenseList, false, sortType);
+        adapter = new ExpenseItemAdapter(context, expenseList, false, sortType);
         recyclerView.setAdapter(adapter);
 
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
@@ -168,6 +198,7 @@ public class MainActivity extends AppCompatActivity {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
 
+        cancelFilter = menu.findItem(R.id.action_cancel_filter);
         MenuItem searchItem = menu.findItem(R.id.action_search);
 
         SearchManager searchManager = (SearchManager) MainActivity.this.getSystemService(Context.SEARCH_SERVICE);
@@ -184,7 +215,19 @@ public class MainActivity extends AppCompatActivity {
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextChange(String query) {
-                // TODO - Implement this
+                expenseList.clear();
+                expenseList.addAll(database.expenseItemDao().getExpenses());
+                adapter.notifyDataSetChanged();
+
+                for (int i = 0; i < expenseList.size(); i++) {
+                    if (!expenseList.get(i).getCategory().toLowerCase().contains(query.toLowerCase())) {
+                        expenseList.remove(i);
+                        adapter.notifyItemRemoved(i);
+
+                        i--;
+                    }
+                }
+
                 return false;
             }
 
@@ -198,6 +241,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
@@ -205,6 +252,15 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         switch (id) {
+            case R.id.action_cancel_filter:
+                expenseList.clear();
+                expenseList.addAll(database.expenseItemDao().getExpenses());
+
+                adapter.notifyDataSetChanged();
+
+                cancelFilter.setVisible(false);
+
+                break;
             case R.id.action_categories:
                 startActivity(new Intent(context, CategoryActivity.class));
                 break;
@@ -216,16 +272,22 @@ public class MainActivity extends AppCompatActivity {
                 }
                 break;
             case R.id.action_export:
-                if (database.expenseItemDao().getExpenseCount() > 0) {
+                if (expenseList.size() > 0) {
                     getExportDirectory();
                 } else {
                     Toast.makeText(context, "There are no expenses to export.", Toast.LENGTH_LONG).show();
                 }
                 break;
+            case R.id.action_filter:
+                if (database.expenseItemDao().getExpenseCount() > 0) {
+                    showFilterDialog();
+                } else {
+                    Toast.makeText(context, "There are no expenses to filter.", Toast.LENGTH_LONG).show();
+                }
+                break;
             case R.id.action_import:
                 getImportDirectory();
                 break;
-
             case R.id.action_sort:
                 if (expenseList.size() > 0) {
                     showSortDialog();
@@ -268,6 +330,13 @@ public class MainActivity extends AppCompatActivity {
         startActivityForResult(Intent.createChooser(intent, "Select File"), Utils.PICK_FILE);
     }
 
+    private Comparator<ExpenseItem> getSortType() {
+        SharedPreferences sp = getSharedPreferences(getApplicationContext().getPackageName().concat(".SortType"), Context.MODE_PRIVATE);
+        int sortTypeID = sp.getInt(ExpenseItem.class.getSimpleName(),-1);
+
+        return ExpenseItem.getSortType(sortTypeID);
+    }
+
     private void refreshAdapter() {
         adapter = new ExpenseItemAdapter(context, expenseList, false, sortType);
         recyclerView.setAdapter(adapter);
@@ -277,6 +346,13 @@ public class MainActivity extends AppCompatActivity {
         expenseList.clear();
         expenseList.addAll(database.expenseItemDao().getExpenses());
         adapter.notifyDataSetChanged();
+    }
+
+    private void setSortType(Comparator<ExpenseItem> sortType) {
+        this.sortType = sortType;
+
+        SharedPreferences sp = getSharedPreferences(getApplicationContext().getPackageName().concat(".SortType"), Context.MODE_PRIVATE);
+        sp.edit().putInt(ExpenseItem.class.getSimpleName(), ExpenseItem.getSortTypeID(sortType)).apply();
     }
 
     private void showDeleteExpensesDialog() {
@@ -291,6 +367,237 @@ public class MainActivity extends AppCompatActivity {
                 .setNegativeButton(android.R.string.no, null)
                 .setIcon(android.R.drawable.ic_dialog_alert)
                 .show();
+    }
+
+    private void showFilterDialog() {
+        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
+        View view = getLayoutInflater().inflate(R.layout.dialog_filter, null);
+
+        alertBuilder.setView(view);
+        final AlertDialog filterDialog = alertBuilder.create();
+        filterDialog.show();
+
+        final TextView filterDate, filterPrice;
+        filterDate = filterDialog.findViewById(R.id.filterDate);
+        filterPrice = filterDialog.findViewById(R.id.filterPrice);
+
+        assert filterDate != null;
+        filterDate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                filterDialog.hide();
+
+                AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
+                View view = getLayoutInflater().inflate(R.layout.dialog_filter_date, null);
+
+                alertBuilder.setView(view);
+                final AlertDialog dialog = alertBuilder.create();
+                dialog.show();
+
+                final TextView errorMessage;
+                final Button cancelDateRange, selectFromDate, selectToDate, submitDateRange;
+
+                errorMessage = dialog.findViewById(R.id.errorMessage);
+                cancelDateRange = dialog.findViewById(R.id.cancelDateRange);
+                selectFromDate = dialog.findViewById(R.id.selectFromDate);
+                selectToDate = dialog.findViewById(R.id.selectToDate);
+                submitDateRange = dialog.findViewById(R.id.submitDateRange);
+
+                String oldestExpense = database.expenseItemDao().getOldestExpense();
+
+                final Calendar toCalendar = Calendar.getInstance();
+                final Calendar fromCalendar = Calendar.getInstance();
+                fromCalendar.set(Calendar.YEAR, Integer.parseInt(oldestExpense.split(", ")[1]));
+                fromCalendar.set(Calendar.MONTH, Utils.getMonth(oldestExpense.substring(0, 3)));
+                fromCalendar.set(Calendar.DAY_OF_MONTH, Integer.parseInt(oldestExpense.substring(4, oldestExpense.indexOf(","))));
+
+                selectFromDate.setText(DateFormat.getDateInstance().format(fromCalendar.getTime()));
+                selectToDate.setText(DateFormat.getDateInstance().format(toCalendar.getTime()));
+
+
+                selectFromDate.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        DatePickerDialog datePickerDialog = new DatePickerDialog(context, MainActivity.this, fromCalendar.get(Calendar.YEAR), fromCalendar.get(Calendar.MONTH), fromCalendar.get(Calendar.DAY_OF_MONTH));
+                        datePickerDialog.show();
+
+                        datePickerDialog.setOnDateSetListener(new DatePickerDialog.OnDateSetListener() {
+                            @Override
+                            public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+                                fromCalendar.set(Calendar.YEAR, year);
+                                fromCalendar.set(Calendar.MONTH, month);
+                                fromCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+
+                                selectFromDate.setText(DateFormat.getDateInstance().format(fromCalendar.getTime()));
+                            }
+                        });
+                    }
+                });
+
+                selectToDate.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        DatePickerDialog datePickerDialog = new DatePickerDialog(context, MainActivity.this, toCalendar.get(Calendar.YEAR), toCalendar.get(Calendar.MONTH), toCalendar.get(Calendar.DAY_OF_MONTH));
+                        datePickerDialog.show();
+
+                        datePickerDialog.setOnDateSetListener(new DatePickerDialog.OnDateSetListener() {
+                            @Override
+                            public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+                                toCalendar.set(Calendar.YEAR, year);
+                                toCalendar.set(Calendar.MONTH, month);
+                                toCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+
+                                selectToDate.setText(DateFormat.getDateInstance().format(toCalendar.getTime()));
+                            }
+                        });
+                    }
+                });
+
+                assert cancelDateRange != null;
+                cancelDateRange.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.dismiss();
+                        filterDialog.show();
+                    }
+                });
+
+                assert submitDateRange != null;
+                submitDateRange.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        // TODO - Verify date range is valid
+
+                        ArrayList<ExpenseItem> filteredExpenses = new ArrayList<>();
+                        Date oldest = null;
+                        Date newest = null;
+
+                        try {
+                            oldest = new SimpleDateFormat("MMM dd, yyyy", Locale.US).parse(selectFromDate.getText().toString());
+                            newest = new SimpleDateFormat("MMM dd, yyyy", Locale.US).parse(selectToDate.getText().toString());
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (oldest.after(newest)) {
+                            errorMessage.setText("Date range incorrect.");
+                            errorMessage.setTextColor(Color.RED);
+                            errorMessage.setVisibility(View.VISIBLE);
+                            return;
+                        } else {
+                            errorMessage.setVisibility(View.GONE);
+                        }
+
+                        if (oldest.equals(newest)) {
+                            for (int i = 0; i < expenseList.size(); i++) {
+                                try {
+                                    Date tempDate = new SimpleDateFormat("MMM dd, yyyy", Locale.US).parse(expenseList.get(i).getDate());
+                                    if (tempDate.equals(oldest)) {
+                                        filteredExpenses.add(expenseList.get(i));
+                                    }
+                                } catch (ParseException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        } else {
+                            for (int i = 0; i < expenseList.size(); i++) {
+                                try {
+                                    Date tempDate = new SimpleDateFormat("MMM dd, yyyy", Locale.US).parse(expenseList.get(i).getDate());
+                                    if ((tempDate.before(newest) || tempDate.equals(newest)) && (tempDate.after(oldest) || tempDate.equals(oldest))) { // TODO - Fix this logic
+                                        filteredExpenses.add(expenseList.get(i));
+                                        Log.e("DEBUG", "onClick: " + expenseList.get(i).getPrice() + " WITHIN RANGE");
+                                    }
+                                } catch (ParseException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+
+                        expenseList.clear();
+                        expenseList.addAll(filteredExpenses);
+
+                        adapter.notifyDataSetChanged();
+
+                        cancelFilter.setVisible(true);
+
+                        dialog.dismiss();
+                    }
+                });
+            }
+        });
+
+        assert filterPrice != null;
+        filterPrice.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                filterDialog.hide();
+
+                AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
+                View view = getLayoutInflater().inflate(R.layout.dialog_filter_price, null);
+
+                alertBuilder.setView(view);
+                final AlertDialog dialog = alertBuilder.create();
+                dialog.show();
+
+                Button cancelPriceRange, submitPriceRange;
+                final RangeSeekBar dateRange;
+                dateRange = dialog.findViewById(R.id.dateRange);
+                cancelPriceRange = dialog.findViewById(R.id.cancelPriceRange);
+                submitPriceRange = dialog.findViewById(R.id.submitPriceRange);
+
+                DecimalFormat format = new DecimalFormat("0");
+                format.setRoundingMode(RoundingMode.CEILING);
+
+                int max = Integer.parseInt(format.format(database.expenseItemDao().getMostExpensiveExpense()));
+
+                dateRange.setRangeValues(0, max);
+
+                dateRange.setTextAboveThumbsColor(Color.BLACK);
+
+                assert cancelPriceRange != null;
+                cancelPriceRange.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.dismiss();
+                        filterDialog.show();
+                    }
+                });
+
+                assert submitPriceRange != null;
+                submitPriceRange.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        int min = Integer.parseInt(dateRange.getSelectedMinValue().toString());
+                        int max = Integer.parseInt(dateRange.getSelectedMaxValue().toString());
+
+                        ArrayList<ExpenseItem> filteredExpenses = new ArrayList<>();
+
+                        if (min == max) {
+                            for (int i = 0; i < expenseList.size(); i++) {
+                                if (expenseList.get(i).getPrice() == min) {
+                                    filteredExpenses.add(expenseList.get(i));
+                                }
+                            }
+                        } else {
+                            for (int i = 0; i < expenseList.size(); i++) {
+                                if ((expenseList.get(i).getPrice() > min || expenseList.get(i).getPrice() == min) && ((expenseList.get(i).getPrice() < max) || expenseList.get(i).getPrice() == max)) {
+                                    filteredExpenses.add(expenseList.get(i));
+                                }
+                            }
+                        }
+
+                        expenseList.clear();
+                        expenseList.addAll(filteredExpenses);
+
+                        adapter.notifyDataSetChanged();
+
+                        cancelFilter.setVisible(true);
+
+                        dialog.dismiss();
+                    }
+                });
+            }
+        });
     }
 
     // TODO - Implement shared preferences for persistence of sortType
@@ -334,7 +641,7 @@ public class MainActivity extends AppCompatActivity {
         categoryAscending.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MainActivity.sortType = ExpenseItem.CATEGORY_ASCENDING;
+                setSortType(ExpenseItem.CATEGORY_ASCENDING);
 
                 refreshAdapter();
 
@@ -345,7 +652,7 @@ public class MainActivity extends AppCompatActivity {
         categoryDescending.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MainActivity.sortType = ExpenseItem.CATEGORY_DESCENDING;
+                setSortType(ExpenseItem.CATEGORY_DESCENDING);
 
                 refreshAdapter();
 
@@ -356,7 +663,7 @@ public class MainActivity extends AppCompatActivity {
         priceAscending.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MainActivity.sortType = ExpenseItem.PRICE_ASCENDING;
+                setSortType(ExpenseItem.PRICE_ASCENDING);
 
                 refreshAdapter();
 
@@ -367,7 +674,7 @@ public class MainActivity extends AppCompatActivity {
         priceDescending.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MainActivity.sortType = ExpenseItem.PRICE_DESCENDING;
+                setSortType(ExpenseItem.PRICE_DESCENDING);
 
                 refreshAdapter();
 
@@ -378,7 +685,7 @@ public class MainActivity extends AppCompatActivity {
         dateAscending.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MainActivity.sortType = ExpenseItem.DATE_ASCENDING;
+                setSortType(ExpenseItem.DATE_ASCENDING);
 
                 refreshAdapter();
 
@@ -389,7 +696,7 @@ public class MainActivity extends AppCompatActivity {
         dateDescending.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MainActivity.sortType = ExpenseItem.DATE_DESCENDING;
+                setSortType(ExpenseItem.DATE_DESCENDING);
 
                 refreshAdapter();
 

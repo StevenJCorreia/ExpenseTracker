@@ -112,6 +112,43 @@ public class ExpenseItem implements Serializable {
         return price;
     }
 
+    static Comparator<ExpenseItem> getSortType(int sortTypeID) {
+        switch (sortTypeID) {
+            case 0:
+                return CATEGORY_ASCENDING;
+            case 1:
+                return CATEGORY_DESCENDING;
+            case 2:
+                return DATE_ASCENDING;
+            case 3:
+                return DATE_DESCENDING;
+            case 4:
+                return PRICE_ASCENDING;
+            case 5:
+                return PRICE_DESCENDING;
+        }
+
+        return null;
+    }
+
+    static int getSortTypeID(Comparator<ExpenseItem> sortType) {
+        if (sortType == CATEGORY_ASCENDING) {
+            return 0;
+        } else if (sortType == CATEGORY_DESCENDING) {
+            return 1;
+        } else if (sortType == DATE_ASCENDING) {
+            return 2;
+        } else if (sortType == DATE_DESCENDING) {
+            return 3;
+        } else if (sortType == PRICE_ASCENDING) {
+            return 4;
+        } else if (sortType == PRICE_DESCENDING) {
+            return 5;
+        }
+
+        return -1;
+    }
+
     static ArrayList<ExpenseItem> importExpenses(Uri filePath, Context context) {
         ArrayList<ExpenseItem> output = new ArrayList<>();
 
@@ -119,7 +156,7 @@ public class ExpenseItem implements Serializable {
             if (inputStream != null) {
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
                 BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-                String line = "";
+                String line;
 
                 while ((line = bufferedReader.readLine()) != null) {
                     if (!line.isEmpty()) {
@@ -136,9 +173,6 @@ public class ExpenseItem implements Serializable {
     }
 
     private static ExpenseItem parse(String line) {
-        // "3,Gas,Feb 8 2020,12.58"
-        int ID = Integer.parseInt(line.split("[,]")[0]);
-
         String category = line.split("[,]")[1];
 
         String date = line.split("[,]")[2];

@@ -50,4 +50,13 @@
         android:layout_height="wrap_content"
         android:text="@string/submit" />
 
+    <TextView
+        android:id="@+id/errorMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="15sp"
+        android:layout_marginVertical="5dp"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
 </LinearLayout>

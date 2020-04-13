@@ -19,6 +19,7 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.DatePicker;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -40,7 +41,8 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
 
     private Spinner categories;
     private Button selectDate, submitExpense;
-    private TextView amountValue;
+    TextView errorMessage;
+    private EditText amountValue;
     private ImageView addCategory;
 
     @Override
@@ -53,6 +55,7 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
         categories = findViewById(R.id.categories);
         selectDate = findViewById(R.id.selectDate);
         submitExpense = findViewById(R.id.submitExpense);
+        errorMessage = findViewById(R.id.errorMessage);
 
         final ExpenseItem item = (ExpenseItem) getIntent().getSerializableExtra("item");
 
@@ -163,6 +166,14 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_add, menu);
+
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
     public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.YEAR, year);
@@ -170,6 +181,20 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
         c.set(Calendar.DAY_OF_MONTH, dayOfMonth);
 
         selectDate.setText(DateFormat.getDateInstance().format(c.getTime()));
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        if (id == R.id.action_back_to_expenses) {
+            finish();
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     private void autoFillData(ExpenseItem item) {
@@ -191,16 +216,31 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
     private boolean formValid() {
         if (categories.getSelectedItem() == null) {
             Log.d(TAG, "formValid: Category not selected.");
+
+            errorMessage.setText("Please select a category.");
+            errorMessage.setTextColor(Color.RED);
+            errorMessage.setVisibility(View.VISIBLE);
+
             return false;
         }
 
         if (amountValue.getText().toString().length() == 0) {
             Log.d(TAG, "formValid: Amount not defined.");
+
+            errorMessage.setText("Please enter an amount.");
+            errorMessage.setTextColor(Color.RED);
+            errorMessage.setVisibility(View.VISIBLE);
+
             return false;
         }
 
         if (!isDouble(amountValue.getText().toString())) {
             Log.d(TAG, "formValid: Incorrect amount format.");
+
+            errorMessage.setText("Please enter a non-integer amount.");
+            errorMessage.setTextColor(Color.RED);
+            errorMessage.setVisibility(View.VISIBLE);
+
             return false;
         }
 
