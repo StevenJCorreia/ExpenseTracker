@@ -7,37 +7,46 @@
     <item
         android:id="@+id/action_search"
         android:icon="@drawable/ic_search_black_24dp"
-        app:showAsAction="ifRoom|collapseActionView"
         android:title="@string/search"
+        app:showAsAction="ifRoom|collapseActionView"
         app:actionViewClass="android.widget.SearchView" />
 
     <item
+        android:id="@+id/action_cancel_filter"
+        android:icon="@drawable/ic_cancel_black_24dp"
+        android:title="@string/cancel_filter"
+        app:showAsAction="ifRoom|collapseActionView"
+        android:visible="false" />
+
+    <item
         android:id="@+id/action_categories"
-        android:orderInCategory="1"
         android:title="@string/action_categories"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_import"
-        android:orderInCategory="2"
-        android:title="@string/import_expenses"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_export"
-        android:orderInCategory="3"
-        android:title="@string/export_expenses"
-        app:showAsAction="never" />
+        android:orderInCategory="1"/>
 
     <item
         android:id="@+id/action_sort"
-        android:orderInCategory="4"
+        android:icon="@drawable/ic_sort_black_24dp"
         android:title="@string/action_sort"
-        app:showAsAction="never" />
+        android:orderInCategory="2"/>
+
+    <item
+        android:id="@+id/action_filter"
+        android:icon="@drawable/ic_filter_list_black_24dp"
+        android:title="@string/filter"
+        android:orderInCategory="3" />
+
+    <item
+        android:id="@+id/action_import"
+        android:title="@string/import_expenses"
+        android:orderInCategory="4" />
+
+    <item
+        android:id="@+id/action_export"
+        android:title="@string/export_expenses"
+        android:orderInCategory="5" />
 
     <item
         android:id="@+id/action_delete_expenses"
-        android:orderInCategory="5"
         android:title="@string/action_delete_expenses"
-        app:showAsAction="never" />
+        android:orderInCategory="6" />
 </menu>

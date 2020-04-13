@@ -3,6 +3,7 @@ package com.stevenjcorreia.expensetracker;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 
@@ -33,7 +34,7 @@ import java.util.Comparator;
 
 public class CategoryActivity extends AppCompatActivity {
     private static ArrayList<String> categoryList = new ArrayList<>();
-    private static Comparator<String> sortType = null;
+    private Comparator<String> sortType = null;
     private Context context = this;
 
     private RecyclerView recyclerView;
@@ -45,6 +46,8 @@ public class CategoryActivity extends AppCompatActivity {
         setContentView(R.layout.activity_category);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        sortType = getSortType();
 
         recyclerView = findViewById(R.id.categoryRecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -164,7 +167,19 @@ public class CategoryActivity extends AppCompatActivity {
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextChange(String query) {
-                // TODO - Implement this
+                categoryList.clear();
+                categoryList.addAll(Category.getCategoryList(context));
+                adapter.notifyDataSetChanged();
+
+                for (int i = 0; i < categoryList.size(); i++) {
+                    if (!categoryList.get(i).toLowerCase().contains(query.toLowerCase())) {
+                        categoryList.remove(i);
+                        adapter.notifyItemRemoved(i);
+
+                        i--;
+                    }
+                }
+
                 return false;
             }
 
@@ -222,9 +237,23 @@ public class CategoryActivity extends AppCompatActivity {
         Toast.makeText(context, count + (count == 1 ? " category has " : " categories have ") + "been deleted.", Toast.LENGTH_LONG).show();
     }
 
+    private Comparator<String> getSortType() {
+        SharedPreferences sp = getSharedPreferences(getApplicationContext().getPackageName().concat(".SortType"), Context.MODE_PRIVATE);
+        int sortTypeID = sp.getInt(Category.class.getSimpleName(),-1);
+
+        return sortTypeID == 0 ? Category.CATEGORY_ASCENDING : Category.CATEGORY_DESCENDING;
+    }
+
     private void refreshAdapter() {
         adapter = new CategoryAdapter(context, categoryList, sortType);
         recyclerView.setAdapter(adapter);
+    }
+
+    private void setSortType(Comparator<String> sortType) {
+        this.sortType = sortType;
+
+        SharedPreferences sp = getSharedPreferences(getApplicationContext().getPackageName().concat(".SortType"), Context.MODE_PRIVATE);
+        sp.edit().putInt(Category.class.getSimpleName(), sortType == Category.CATEGORY_ASCENDING ? 0 : 1).apply();
     }
 
     private void showDeleteDialog() {
@@ -266,7 +295,7 @@ public class CategoryActivity extends AppCompatActivity {
         categoryAscending.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                CategoryActivity.sortType = Category.CATEGORY_ASCENDING;
+                setSortType(Category.CATEGORY_ASCENDING);
 
                 refreshAdapter();
 
@@ -278,7 +307,7 @@ public class CategoryActivity extends AppCompatActivity {
         categoryDescending.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                CategoryActivity.sortType = Category.CATEGORY_DESCENDING;
+                setSortType(Category.CATEGORY_DESCENDING);
 
                 refreshAdapter();
 

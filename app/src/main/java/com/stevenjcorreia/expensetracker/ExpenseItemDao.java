@@ -17,11 +17,32 @@ public interface ExpenseItemDao {
     @Query("DELETE FROM ExpenseItem")
     void deleteExpenses();
 
+    @Query("SELECT AVG(price) FROM ExpenseItem WHERE category = :category")
+    double getAvgExpenseByCategory(String category);
+
     @Query("SELECT COUNT(*) FROM ExpenseItem")
     int getExpenseCount();
 
     @Query("SELECT * FROM ExpenseItem")
     List<ExpenseItem> getExpenses();
+
+    @Query("SELECT MAX(price) FROM ExpenseItem WHERE category = :category")
+    double getMaxExpenseByCategory(String category);
+
+    @Query("SELECT MIN(price) FROM ExpenseItem WHERE category = :category")
+    double getMinExpenseByCategory(String category);
+
+    @Query("SELECT COUNT(*) FROM ExpenseItem WHERE category = :category")
+    int getExpenseCountByCategory(String category);
+
+    @Query("SELECT MAX(price) FROM ExpenseItem")
+    double getMostExpensiveExpense();
+
+    @Query("SELECT MIN(date) FROM ExpenseItem")
+    String getOldestExpense();
+
+    @Query("SELECT SUM(price) FROM ExpenseItem WHERE category = :category")
+    double getTotalPriceByCategory(String category);
 
     @Insert
     void insertExpenseItem(ExpenseItem item);
