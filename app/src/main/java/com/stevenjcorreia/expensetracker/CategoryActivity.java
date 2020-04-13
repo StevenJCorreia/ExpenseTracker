@@ -1,5 +1,6 @@
 package com.stevenjcorreia.expensetracker;
 
+import android.app.SearchManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
@@ -22,13 +23,17 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.RadioButton;
+import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 
 public class CategoryActivity extends AppCompatActivity {
     private static ArrayList<String> categoryList = new ArrayList<>();
+    private static Comparator<String> sortType = null;
     private Context context = this;
 
     private RecyclerView recyclerView;
@@ -44,9 +49,9 @@ public class CategoryActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.categoryRecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        categoryList = Category.getCategoryList();
+        categoryList = Category.getCategoryList(context);
 
-        adapter = new CategoryAdapter(this, categoryList);
+        adapter = new CategoryAdapter(this, categoryList, sortType);
         recyclerView.setAdapter(adapter);
 
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
@@ -60,10 +65,11 @@ public class CategoryActivity extends AppCompatActivity {
                 final int position = viewHolder.getAdapterPosition();
                 final String temp = categoryList.get(position);
                 categoryList.remove(temp);
-                Category.removeCategoryFromFile(temp);
+                Category.removeCategoryFromFile(temp, context);
+
                 adapter.notifyItemRemoved(position);
 
-                Snackbar snackbar = Snackbar.make(getWindow().getDecorView().getRootView(), " removed.", Snackbar.LENGTH_LONG);
+                Snackbar snackbar = Snackbar.make(getWindow().getDecorView().getRootView(), " removed category.", Snackbar.LENGTH_LONG);
                 snackbar.setAction("UNDO", new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
@@ -103,11 +109,11 @@ public class CategoryActivity extends AppCompatActivity {
                     @Override
                     public void onTextChanged(CharSequence s, int start, int before, int count) {
                         if (categoryValue.getText().toString().length() == 0) {
-                            errorMessage.setText("CategoryItem cannot be blank.");
+                            errorMessage.setText("Category item cannot be blank.");
                             errorMessage.setTextColor(Color.RED);
                             errorMessage.setVisibility(View.VISIBLE);
-                        } else if (Category.getCategoryList().indexOf(categoryValue.getText().toString()) != -1) {
-                            errorMessage.setText("CategoryItem \"" + categoryValue.getText().toString() + "\" already exists.");
+                        } else if (categoryList.indexOf(categoryValue.getText().toString()) != -1) {
+                            errorMessage.setText("Category item \"" + categoryValue.getText().toString() + "\" already exists.");
                             errorMessage.setTextColor(Color.RED);
                             errorMessage.setVisibility(View.VISIBLE);
                         } else {
@@ -121,14 +127,14 @@ public class CategoryActivity extends AppCompatActivity {
                 submitCategory.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        if (categoryValue.getText().toString().length() == 0 || Category.getCategoryList().indexOf(categoryValue.getText().toString()) != -1) {
+                        if (categoryValue.getText().toString().length() == 0 || categoryList.indexOf(categoryValue.getText().toString()) != -1) {
                             return;
                         }
 
-                        Category.getCategoryList().add(categoryValue.getText().toString());
-                        Category.addCategoryToFile(categoryValue.getText().toString());
+                        categoryList.add(categoryValue.getText().toString());
+                        Category.addCategoryToFile(categoryValue.getText().toString(), context);
 
-                        adapter.notifyDataSetChanged();
+                        refreshAdapter();
 
                         dialog.dismiss();
                     }
@@ -141,7 +147,34 @@ public class CategoryActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_category, menu);
-        return true;
+
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+
+        SearchManager searchManager = (SearchManager) CategoryActivity.this.getSystemService(Context.SEARCH_SERVICE);
+
+        SearchView searchView = null;
+        if (searchItem != null) {
+            searchView = (SearchView) searchItem.getActionView();
+        }
+        if (searchView != null) {
+            searchView.setSearchableInfo(searchManager.getSearchableInfo(CategoryActivity.this.getComponentName()));
+        }
+
+        assert searchView != null;
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextChange(String query) {
+                // TODO - Implement this
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+        });
+
+        return super.onCreateOptionsMenu(menu);
     }
 
     @Override
@@ -181,12 +214,17 @@ public class CategoryActivity extends AppCompatActivity {
     private void deleteAllCategories() {
         int count = categoryList.size();
 
-        Category.removeCategoriesFromFile();
+        Category.removeCategoriesFromFile(context);
         categoryList.clear();
 
         adapter.notifyDataSetChanged();
 
         Toast.makeText(context, count + (count == 1 ? " category has " : " categories have ") + "been deleted.", Toast.LENGTH_LONG).show();
+    }
+
+    private void refreshAdapter() {
+        adapter = new CategoryAdapter(context, categoryList, sortType);
+        recyclerView.setAdapter(adapter);
     }
 
     private void showDeleteDialog() {
@@ -204,6 +242,48 @@ public class CategoryActivity extends AppCompatActivity {
     }
 
     private void showSortDialog() {
-        // TODO - Implement category sort dialog
+        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
+        View view = getLayoutInflater().inflate(R.layout.dialog_sort_category, null);
+
+        alertBuilder.setView(view);
+        final AlertDialog dialog = alertBuilder.create();
+        dialog.show();
+
+        RadioButton categoryAscending, categoryDescending;
+        categoryAscending = dialog.findViewById(R.id.categoryAscendingRadio);
+        categoryDescending = dialog.findViewById(R.id.categoryDescendingRadio);
+
+        if (sortType == null) {
+            categoryAscending.setChecked(false);
+            categoryDescending.setChecked(false);
+        } else if (sortType == Category.CATEGORY_ASCENDING) {
+            categoryAscending.setChecked(true);
+        } else if (sortType == Category.CATEGORY_DESCENDING) {
+            categoryDescending.setChecked(true);
+        }
+
+        assert categoryAscending != null;
+        categoryAscending.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                CategoryActivity.sortType = Category.CATEGORY_ASCENDING;
+
+                refreshAdapter();
+
+                dialog.dismiss();
+            }
+        });
+
+        assert categoryDescending != null;
+        categoryDescending.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                CategoryActivity.sortType = Category.CATEGORY_DESCENDING;
+
+                refreshAdapter();
+
+                dialog.dismiss();
+            }
+        });
     }
 }

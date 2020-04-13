@@ -15,13 +15,17 @@ import java.util.Collections;
 import java.util.Comparator;
 
 public class ExpenseItemAdapter extends RecyclerView.Adapter<ExpenseItemHolder> {
-    private Context context;
     private ArrayList<ExpenseItem> expenseItems;
+    private Comparator<ExpenseItem> sortType;
     private ExpenseItemDatabase database;
+    private boolean imported;
+    private Context context;
 
-    ExpenseItemAdapter(Context context, ArrayList<ExpenseItem> expenseItems, Comparator<ExpenseItem> sortType) {
+    ExpenseItemAdapter(Context context, ArrayList<ExpenseItem> expenseItems, boolean imported, Comparator<ExpenseItem> sortType) {
         this.context = context;
         this.expenseItems = expenseItems;
+        this.imported = imported;
+        this.sortType = sortType;
 
         if (sortType != null) {
             Collections.sort(this.expenseItems, sortType);
@@ -41,26 +45,39 @@ public class ExpenseItemAdapter extends RecyclerView.Adapter<ExpenseItemHolder> 
         holder.expenseCategory.setText(expenseItems.get(position).getCategory());
         holder.expenseDate.setText(expenseItems.get(position).getDate());
 
-        holder.setItemClickListener(new ExpenseClickListener() {
-            @Override
-            public void onExpenseClickListener(View v, int position) {
-                Intent intent = new Intent(context, AddActivity.class);
-                intent.putExtra("item", expenseItems.get(position));
-                context.startActivity(intent);
-            }
-        });
+        if (imported) {
+            holder.setItemClickListener(new ExpenseClickListener() {
+                @Override
+                public void onExpenseClickListener(View v, int position) {
+                    // TODO - Implement activity that displays enlarged picture of clicked expense
+                    // Intent intent = new Intent(context, ImageActivity.class);
+                    // intent.putExtra("image", expenseItems.get(position).getImage()); // relative path to image?
+                    // context.startActivity(intent);
+                }
+            });
+        } else {
+            holder.setItemClickListener(new ExpenseClickListener() {
+                @Override
+                public void onExpenseClickListener(View v, int position) {
+                    Intent intent = new Intent(context, AddActivity.class);
+                    intent.putExtra("item", expenseItems.get(position));
+                    context.startActivity(intent);
+                }
+            });
+        }
     }
 
     @NonNull
     @Override
     public ExpenseItemHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.expense_item, parent, false);
-        return new ExpenseItemHolder(view);
+        return new ExpenseItemHolder(view, imported);
     }
 
     void restoreItem(ExpenseItem deletedModel, int deletedPosition) {
         expenseItems.add(deletedPosition, deletedModel);
         database.expenseItemDao().deleteExpense(deletedModel);
+
         notifyItemInserted(deletedPosition);
     }
 }

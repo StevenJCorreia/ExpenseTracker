@@ -10,14 +10,22 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class CategoryAdapter extends RecyclerView.Adapter<CategoryHolder> {
-    private Context context;
+    private Comparator<String> sortType;
     private ArrayList<String> categoryItems;
+    private Context context;
 
-    CategoryAdapter(Context context, ArrayList<String> categoryItems) {
+    CategoryAdapter(Context context, ArrayList<String> categoryItems, Comparator<String> sortType) {
         this.context = context;
         this.categoryItems = categoryItems;
+        this.sortType = sortType;
+
+        if (sortType != null) {
+            Collections.sort(this.categoryItems, sortType);
+        }
     }
 
     @Override
@@ -48,7 +56,8 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryHolder> {
 
     void restoreItem(String temp, int position) {
         categoryItems.add(position, temp);
-        Category.removeCategoryFromFile(temp);
+        Category.addCategoryToFile(temp, context);
+
         notifyItemInserted(position);
     }
 }

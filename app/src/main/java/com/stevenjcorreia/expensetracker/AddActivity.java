@@ -24,8 +24,11 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
 public class AddActivity extends AppCompatActivity implements DatePickerDialog.OnDateSetListener {
     private static final String TAG = AddActivity.class.getName();
@@ -62,7 +65,10 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
         categories.setAdapter(categoriesAdapter);
 
         if (item != null) {
+            setTitle(R.string.edit_activity_title);
             autoFillData(item);
+        } else {
+            selectDate.setText(new SimpleDateFormat("MMM dd, yyyy", Locale.US).format(new Date()));
         }
 
         addCategory.setOnClickListener(new View.OnClickListener() {
@@ -92,11 +98,11 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
                     @Override
                     public void onTextChanged(CharSequence s, int start, int before, int count) {
                         if (categoryValue.getText().toString().length() == 0) {
-                            errorMessage.setText("CategoryItem cannot be blank.");
+                            errorMessage.setText("Category item cannot be blank.");
                             errorMessage.setTextColor(Color.RED);
                             errorMessage.setVisibility(View.VISIBLE);
-                        } else if (Category.getCategoryList().indexOf(categoryValue.getText().toString()) != -1) {
-                            errorMessage.setText("CategoryItem \"" + categoryValue.getText().toString() + "\" already exists.");
+                        } else if (categoryList.indexOf(categoryValue.getText().toString()) != -1) {
+                            errorMessage.setText("Category item \"" + categoryValue.getText().toString() + "\" already exists.");
                             errorMessage.setTextColor(Color.RED);
                             errorMessage.setVisibility(View.VISIBLE);
                         } else {
@@ -110,16 +116,16 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
                 submitCategory.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        if (categoryValue.getText().toString().length() == 0 || Category.getCategoryList().indexOf(categoryValue.getText().toString()) != -1) {
-                            return;
-                        }
+                    if (categoryValue.getText().toString().length() == 0 || categoryList.indexOf(categoryValue.getText().toString()) != -1) {
+                        return;
+                    }
 
-                        Category.getCategoryList().add(categoryValue.getText().toString());
-                        Category.addCategoryToFile(categoryValue.getText().toString());
-                        categoriesAdapter.notifyDataSetChanged();
-                        categories.setSelection(Category.getCategoryList().size() - 1);
+                    categoryList.add(categoryValue.getText().toString());
+                    Category.addCategoryToFile(categoryValue.getText().toString(), context);
+                    categoriesAdapter.notifyDataSetChanged();
+                    categories.setSelection(categoryList.size() - 1);
 
-                        dialog.dismiss();
+                    dialog.dismiss();
                     }
                 });
             }
@@ -128,39 +134,32 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
         selectDate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                DialogFragment datePicker = new DatePickerFragment();
-                datePicker.show(getSupportFragmentManager(), "date picker");
+            DialogFragment datePicker = new DatePickerFragment();
+            datePicker.show(getSupportFragmentManager(), "date picker");
             }
         });
 
         submitExpense.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!formValid()) {
-                    return;
-                }
+            if (!formValid()) {
+                return;
+            }
 
-                if (hasIntentExtras) {
-                    item.setPrice(Double.parseDouble(amountValue.getText().toString()));
-                    item.setCategory(categories.getSelectedItem().toString());
-                    item.setDate(selectDate.getText().toString());
+            if (hasIntentExtras) {
+                item.setPrice(Double.parseDouble(amountValue.getText().toString()));
+                item.setCategory(categories.getSelectedItem().toString());
+                item.setDate(selectDate.getText().toString());
 
-                    expenseItemDatabase.expenseItemDao().updateExpenseItem(item);
-                } else {
-                    ExpenseItem item = new ExpenseItem(Double.parseDouble(amountValue.getText().toString()), categories.getSelectedItem().toString(), selectDate.getText().toString());
-                    expenseItemDatabase.expenseItemDao().insertExpenseItem(item);
-                }
+                expenseItemDatabase.expenseItemDao().updateExpenseItem(item);
+            } else {
+                ExpenseItem item = new ExpenseItem(Double.parseDouble(amountValue.getText().toString()), categories.getSelectedItem().toString(), selectDate.getText().toString());
+                expenseItemDatabase.expenseItemDao().insertExpenseItem(item);
+            }
 
-                startActivity(new Intent(context, MainActivity.class));
+            startActivity(new Intent(context, MainActivity.class));
             }
         });
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_add, menu);
-        return true;
     }
 
     @Override
@@ -173,31 +172,17 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
         selectDate.setText(DateFormat.getDateInstance().format(c.getTime()));
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        if (id == R.id.action_categories) {
-            startActivity(new Intent(context, CategoryActivity.class));
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
     private void autoFillData(ExpenseItem item) {
         hasIntentExtras = true;
 
         amountValue.setText(String.valueOf(item.getPrice()));
 
-        if (Category.getCategoryList().indexOf(item.getCategory()) == -1) {
-            Category.getCategoryList().add(item.getCategory());
-            Category.addCategoryToFile(item.getCategory());
-            categories.setSelection(Category.getCategoryList().size() - 1);
+        if (categoryList.indexOf(item.getCategory()) == -1) {
+            categoryList.add(item.getCategory());
+            Category.addCategoryToFile(item.getCategory(), context);
+            categories.setSelection(Category.getCategoryList(context).size() - 1);
         } else {
-            categories.setSelection(Category.getCategoryList().indexOf(item.getCategory()));
+            categories.setSelection(categoryList.indexOf(item.getCategory()));
         }
 
         selectDate.setText(item.getDate());
@@ -209,14 +194,11 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
             return false;
         }
 
-        if (selectDate.getText().toString().equals("Select Date")) {
-            Log.d(TAG, "formValid: Date not selected.");
-            return false;
-        }
         if (amountValue.getText().toString().length() == 0) {
             Log.d(TAG, "formValid: Amount not defined.");
             return false;
         }
+
         if (!isDouble(amountValue.getText().toString())) {
             Log.d(TAG, "formValid: Incorrect amount format.");
             return false;
@@ -235,7 +217,7 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
         }
     }
 
-    private static void refreshCategoryList() {
-        categoryList = Category.getCategoryList();
+    private void refreshCategoryList() {
+        categoryList = Category.getCategoryList(context);
     }
 }

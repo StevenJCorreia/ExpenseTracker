@@ -1,15 +1,18 @@
 package com.stevenjcorreia.expensetracker;
 
+import android.app.SearchManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -18,14 +21,20 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.room.Room;
 
+import android.provider.DocumentsContract;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
 import android.widget.RadioButton;
+import android.widget.SearchView;
 import android.widget.Toast;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.Locale;
 
 // TODO - Query Room database asynchronously to avoid UI lock up
 // TODO - Sort the newly added expense automatically so user doesn't have to re-select sort from popup dialog
@@ -37,6 +46,68 @@ public class MainActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
     private ExpenseItemAdapter adapter;
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode != RESULT_OK)
+            return;
+
+        switch (requestCode) {
+            case Utils.CREATE_FILE:
+                Uri directoryPath = data != null ? data.getData() : null;
+                ExpenseItem.exportExpenses(expenseList, directoryPath, context);
+                break;
+            case Utils.PICK_FILE:
+                Uri filePath = data != null ? data.getData() : null;
+                final ArrayList<ExpenseItem> importedExpenses = ExpenseItem.importExpenses(filePath, context);
+
+                AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
+                View view = getLayoutInflater().inflate(R.layout.dialog_import_list, null);
+
+                alertBuilder.setView(view);
+                final AlertDialog dialog = alertBuilder.create();
+                dialog.show();
+
+                RecyclerView importedRecyclerView;
+                Button okay, cancel;
+                importedRecyclerView = dialog.findViewById(R.id.importedRecyclerView);
+                okay = dialog.findViewById(R.id.okay);
+                cancel = dialog.findViewById(R.id.cancelImport);
+
+                importedRecyclerView.setLayoutManager(new LinearLayoutManager(context));
+
+                ExpenseItemAdapter importedAdapter = new ExpenseItemAdapter(context, importedExpenses, true, null);
+                importedRecyclerView.setAdapter(importedAdapter);
+
+                System.out.println(importedExpenses.size());
+
+                assert okay != null;
+                okay.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        for (ExpenseItem expense: importedExpenses) {
+                            database.expenseItemDao().insertExpenseItem(expense);
+                        }
+
+                        refreshAdapterDataSet();
+
+                        dialog.dismiss();
+                    }
+                });
+
+                assert cancel != null;
+                cancel.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.dismiss();
+                    }
+                });
+
+                break;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
 
         expenseList = (ArrayList<ExpenseItem>) database.expenseItemDao().getExpenses();
 
-        adapter = new ExpenseItemAdapter(this, expenseList, null);
+        adapter = new ExpenseItemAdapter(this, expenseList, false, sortType);
         recyclerView.setAdapter(adapter);
 
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
@@ -71,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
 
                 adapter.notifyItemRemoved(position);
 
-                Snackbar snackbar = Snackbar.make(getWindow().getDecorView().getRootView(), " removed.", Snackbar.LENGTH_LONG);
+                Snackbar snackbar = Snackbar.make(getWindow().getDecorView().getRootView(), " removed expense.", Snackbar.LENGTH_LONG);
                 snackbar.setAction("UNDO", new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
@@ -96,7 +167,34 @@ public class MainActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
+
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+
+        SearchManager searchManager = (SearchManager) MainActivity.this.getSystemService(Context.SEARCH_SERVICE);
+
+        SearchView searchView = null;
+        if (searchItem != null) {
+            searchView = (SearchView) searchItem.getActionView();
+        }
+        if (searchView != null) {
+            searchView.setSearchableInfo(searchManager.getSearchableInfo(MainActivity.this.getComponentName()));
+        }
+
+        assert searchView != null;
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextChange(String query) {
+                // TODO - Implement this
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+        });
+
+        return super.onCreateOptionsMenu(menu);
     }
 
     @Override
@@ -117,6 +215,17 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(context, "There are no expenses to delete.", Toast.LENGTH_LONG).show();
                 }
                 break;
+            case R.id.action_export:
+                if (database.expenseItemDao().getExpenseCount() > 0) {
+                    getExportDirectory();
+                } else {
+                    Toast.makeText(context, "There are no expenses to export.", Toast.LENGTH_LONG).show();
+                }
+                break;
+            case R.id.action_import:
+                getImportDirectory();
+                break;
+
             case R.id.action_sort:
                 if (expenseList.size() > 0) {
                     showSortDialog();
@@ -139,9 +248,35 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(context, count + (count == 1 ? " expense has " : " expenses have ") + "been deleted.", Toast.LENGTH_LONG).show();
     }
 
+    private void getExportDirectory() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/csv");
+        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, Utils.getInitialDirectory());
+
+        intent.putExtra(Intent.EXTRA_TITLE, String.format(Locale.US, "/%s_Expenses.csv", new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date())));
+
+        startActivityForResult(intent, Utils.CREATE_FILE);
+    }
+
+    private void getImportDirectory() {
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        intent.setType("text/*");
+        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, Utils.getInitialDirectory());
+
+        startActivityForResult(Intent.createChooser(intent, "Select File"), Utils.PICK_FILE);
+    }
+
     private void refreshAdapter() {
-        adapter = new ExpenseItemAdapter(context, expenseList, sortType);
+        adapter = new ExpenseItemAdapter(context, expenseList, false, sortType);
         recyclerView.setAdapter(adapter);
+    }
+
+    private void refreshAdapterDataSet() {
+        expenseList.clear();
+        expenseList.addAll(database.expenseItemDao().getExpenses());
+        adapter.notifyDataSetChanged();
     }
 
     private void showDeleteExpensesDialog() {

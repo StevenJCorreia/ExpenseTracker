@@ -5,10 +5,18 @@
     tools:context="com.stevenjcorreia.expensetracker.MainActivity">
 
     <item
+        android:id="@+id/action_search"
+        android:icon="@drawable/ic_search_black_24dp"
+        app:showAsAction="ifRoom|collapseActionView"
+        android:title="@string/search"
+        app:actionViewClass="android.widget.SearchView" />
+
+    <item
         android:id="@+id/action_sort"
         android:orderInCategory="1"
         android:title="@string/action_sort"
         app:showAsAction="never" />
+
     <item
         android:id="@+id/action_delete_categories"
         android:orderInCategory="2"
