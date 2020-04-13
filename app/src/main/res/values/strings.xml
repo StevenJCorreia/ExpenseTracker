@@ -1,20 +1,28 @@
 <resources>
+    <string name="add_activity_title">Add Expense</string>
     <string name="add_category">Add Category</string>
     <string name="app_name">Expense Tracker</string>
     <string name="action_categories">Categories</string>
     <string name="action_delete_categories">Delete All Categories</string>
     <string name="action_delete_expenses">Delete All Expenses</string>
     <string name="action_sort">Sort</string>
+    <string name="cancel">Cancel</string>
+    <string name="category_activity_title">Categories</string>
     <string name="date_ascending">Date - Ascending</string>
     <string name="date_descending">Date - Descending</string>
+    <string name="edit_activity_title">Edit Expense</string>
     <string name="enter_amount">Enter Amount</string>
     <string name="enter_category">Enter Category</string>
+    <string name="export_expenses">Export Expenses</string>
+    <string name="import_dialog_title">Imported Expenses</string>
+    <string name="import_expenses">Import Expenses</string>
+    <string name="main_activity_title">My Expenses</string>
     <string name="name_ascending">Category - Ascending</string>
     <string name="name_descending">Category - Descending</string>
     <string name="price_ascending">Price - Ascending</string>
     <string name="price_descending">Price - Descending</string>
+    <string name="search">Search</string>
     <string name="select_date">Select Date</string>
     <string name="sort_dialog_title">Sort By</string>
     <string name="submit">Submit</string>
-    <string name="title_activity_category">Categories</string>
 </resources>
