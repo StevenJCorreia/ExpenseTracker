@@ -1,5 +1,6 @@
 package com.stevenjcorreia.expensetracker;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.DialogFragment;
@@ -7,9 +8,13 @@ import androidx.room.Room;
 
 import android.app.DatePickerDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -24,12 +29,14 @@ import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Objects;
 
 public class AddActivity extends AppCompatActivity implements DatePickerDialog.OnDateSetListener {
     private static final String TAG = AddActivity.class.getName();
@@ -38,12 +45,40 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
     private ExpenseItemDatabase expenseItemDatabase = null;
     private Context context = this;
     private boolean hasIntentExtras = false;
+    private boolean imageSet = false;
 
     private Spinner categories;
     private Button selectDate, submitExpense;
     TextView errorMessage;
     private EditText amountValue;
-    private ImageView addCategory;
+    private ImageView addCategory, addImage;
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode != RESULT_OK) {
+            return;
+        }
+
+        switch (requestCode) {
+            case Utils.PICK_IMAGE:
+                Uri imageUri = data != null ? data.getData() : null;
+                try {
+                    Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), imageUri);
+                    addImage.setImageBitmap(bitmap);
+                } catch (IOException e) {
+                    Log.e(TAG, "IOException.", e);
+                }
+                break;
+            case Utils.TAKE_IMAGE:
+                Bitmap imageBitmap = (Bitmap) (data != null ? Objects.requireNonNull(data.getExtras()).get("data") : null);
+                addImage.setImageBitmap(imageBitmap);
+                break;
+        }
+
+        imageSet = true;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +89,7 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
         amountValue = findViewById(R.id.amountValue);
         categories = findViewById(R.id.categories);
         selectDate = findViewById(R.id.selectDate);
+        addImage = findViewById(R.id.addImage);
         submitExpense = findViewById(R.id.submitExpense);
         errorMessage = findViewById(R.id.errorMessage);
 
@@ -63,7 +99,7 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
 
         refreshCategoryList();
 
-        final ArrayAdapter<String> categoriesAdapter = new ArrayAdapter<>(this, R.layout.support_simple_spinner_dropdown_item, categoryList);
+        final ArrayAdapter<String> categoriesAdapter = new ArrayAdapter<>(context, R.layout.support_simple_spinner_dropdown_item, categoryList);
         categoriesAdapter.setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item);
         categories.setAdapter(categoriesAdapter);
 
@@ -134,6 +170,90 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
             }
         });
 
+        addImage.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                if (imageSet) {
+                    AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
+                    View view = getLayoutInflater().inflate(R.layout.dialog_image_edit, null);
+
+                    alertBuilder.setView(view);
+                    final AlertDialog dialog = alertBuilder.create();
+                    dialog.show();
+
+                    TextView changePicture, removePicture, cancelImageEdit;
+                    changePicture = dialog.findViewById(R.id.changePicture);
+                    removePicture = dialog.findViewById(R.id.removePicture);
+                    cancelImageEdit = dialog.findViewById(R.id.cancelImageEdit);
+
+                    changePicture.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            dialog.dismiss();
+                            addImage.performClick();
+                        }
+                    });
+
+                    removePicture.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            addImage.setImageResource(R.drawable.ic_photo_camera_black_24dp);
+                            imageSet = false;
+
+                            dialog.dismiss();
+                        }
+                    });
+
+                    cancelImageEdit.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            dialog.dismiss();
+                        }
+                    });
+                }
+
+                return false;
+            }
+        });
+
+        addImage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
+                View view = getLayoutInflater().inflate(R.layout.dialog_image_add, null);
+
+                alertBuilder.setView(view);
+                final AlertDialog dialog = alertBuilder.create();
+                dialog.show();
+
+                TextView takePicture, selectPicture;
+                takePicture = dialog.findViewById(R.id.takePicture);
+                selectPicture = dialog.findViewById(R.id.selectPicture);
+
+                takePicture.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+                        startActivityForResult(intent, Utils.TAKE_IMAGE);
+
+                        dialog.dismiss();
+                    }
+                });
+
+                selectPicture.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Intent intent = new Intent(Intent.ACTION_PICK);
+                        intent.setType("image/*");
+                        intent.setAction(Intent.ACTION_GET_CONTENT);
+                        startActivityForResult(Intent.createChooser(intent, "Select Picture"), Utils.PICK_IMAGE);
+
+                        dialog.dismiss();
+                    }
+                });
+            }
+        });
+
         selectDate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -149,6 +269,33 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
                 return;
             }
 
+            if (!imageSet) {
+                new AlertDialog.Builder(context)
+                        .setTitle("No Image")
+                        .setMessage("Are you sure you want to add this expense without an image?")
+                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                if (hasIntentExtras) {
+                                    item.setPrice(Double.parseDouble(amountValue.getText().toString()));
+                                    item.setCategory(categories.getSelectedItem().toString());
+                                    item.setDate(selectDate.getText().toString());
+
+                                    expenseItemDatabase.expenseItemDao().updateExpenseItem(item);
+                                } else {
+                                    ExpenseItem item = new ExpenseItem(Double.parseDouble(amountValue.getText().toString()), categories.getSelectedItem().toString(), selectDate.getText().toString(), null);
+                                    expenseItemDatabase.expenseItemDao().insertExpenseItem(item);
+                                }
+
+                                startActivity(new Intent(context, MainActivity.class));
+                            }
+                        })
+                        .setNegativeButton(android.R.string.no, null)
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .show();
+
+                return;
+            }
+
             if (hasIntentExtras) {
                 item.setPrice(Double.parseDouble(amountValue.getText().toString()));
                 item.setCategory(categories.getSelectedItem().toString());
@@ -156,7 +303,7 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
 
                 expenseItemDatabase.expenseItemDao().updateExpenseItem(item);
             } else {
-                ExpenseItem item = new ExpenseItem(Double.parseDouble(amountValue.getText().toString()), categories.getSelectedItem().toString(), selectDate.getText().toString());
+                ExpenseItem item = new ExpenseItem(Double.parseDouble(amountValue.getText().toString()), categories.getSelectedItem().toString(), selectDate.getText().toString(), Utils.imageViewToByteArray(addImage));
                 expenseItemDatabase.expenseItemDao().insertExpenseItem(item);
             }
 
@@ -211,6 +358,10 @@ public class AddActivity extends AppCompatActivity implements DatePickerDialog.O
         }
 
         selectDate.setText(item.getDate());
+
+        if (item.getImage() != null) {
+            addImage.setImageBitmap(Utils.byteArrayToBitmap(item.getImage()));
+        }
     }
 
     private boolean formValid() {

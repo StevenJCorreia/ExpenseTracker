@@ -50,11 +50,11 @@ public class CategoryActivity extends AppCompatActivity {
         sortType = getSortType();
 
         recyclerView = findViewById(R.id.categoryRecyclerView);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setLayoutManager(new LinearLayoutManager(context));
 
         categoryList = Category.getCategoryList(context);
 
-        adapter = new CategoryAdapter(this, categoryList, sortType);
+        adapter = new CategoryAdapter(context, categoryList, sortType);
         recyclerView.setAdapter(adapter);
 
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
@@ -72,7 +72,7 @@ public class CategoryActivity extends AppCompatActivity {
 
                 adapter.notifyItemRemoved(position);
 
-                Snackbar snackbar = Snackbar.make(getWindow().getDecorView().getRootView(), " removed category.", Snackbar.LENGTH_LONG);
+                Snackbar snackbar = Snackbar.make(getWindow().getDecorView().getRootView(), String.format("Removed category %s.", temp), Snackbar.LENGTH_LONG);
                 snackbar.setAction("UNDO", new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {

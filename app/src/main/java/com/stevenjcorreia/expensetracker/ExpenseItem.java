@@ -37,10 +37,14 @@ public class ExpenseItem implements Serializable {
     @ColumnInfo(name = "price")
     private double price;
 
-    ExpenseItem(double price, String category, String date) {
+    @ColumnInfo(name = "image", typeAffinity = ColumnInfo.BLOB)
+    private byte[] image;
+
+    ExpenseItem(double price, String category, String date, byte[] image) {
+        this.price = price;
         this.category = category;
         this.date = date;
-        this.price = price;
+        this.image = image;
     }
 
     static final Comparator<ExpenseItem> CATEGORY_ASCENDING = new Comparator<ExpenseItem>() {
@@ -100,12 +104,16 @@ public class ExpenseItem implements Serializable {
         return category;
     }
 
+    String getDate() {
+        return date;
+    }
+
     int getID() {
         return ID;
     }
 
-    String getDate() {
-        return date;
+    public byte[] getImage() {
+        return image;
     }
 
     double getPrice() {
@@ -180,7 +188,7 @@ public class ExpenseItem implements Serializable {
 
         double price = Double.parseDouble(line.split("[,]")[3]);
 
-        return new ExpenseItem(price, category, date);
+        return new ExpenseItem(price, category, date, null);
     }
 
     static final Comparator<ExpenseItem> PRICE_ASCENDING = new Comparator<ExpenseItem>() {
@@ -197,16 +205,20 @@ public class ExpenseItem implements Serializable {
         }
     };
 
-    void setID(int ID) {
-        this.ID = ID;
-    }
-
     public void setCategory(String category) {
         this.category = category;
     }
 
     void setDate(String date) {
         this.date = date;
+    }
+
+    void setID(int ID) {
+        this.ID = ID;
+    }
+
+    public void setImage(byte[] image) {
+        this.image = image;
     }
 
     void setPrice(double price) {

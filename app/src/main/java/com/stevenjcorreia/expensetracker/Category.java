@@ -11,7 +11,6 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Comparator;
 
-// TODO - Grab categories from imported or accidentally deleted categories?
 class Category {
     private static final String TAG = Category.class.getName();
 
@@ -64,9 +63,8 @@ class Category {
             }
         }
         catch (IOException e) {
-            Log.e(TAG, "getCategoryList: No category file.", e);
+            Log.i(TAG, "getCategoryList: No category file.");
         }
-
         return output;
     }
 

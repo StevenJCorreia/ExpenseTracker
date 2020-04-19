@@ -23,6 +23,9 @@ public interface ExpenseItemDao {
     @Query("SELECT COUNT(*) FROM ExpenseItem")
     int getExpenseCount();
 
+    @Query("SELECT COUNT(*) FROM ExpenseItem WHERE category = :category")
+    int getExpenseCountByCategory(String category);
+
     @Query("SELECT * FROM ExpenseItem")
     List<ExpenseItem> getExpenses();
 
@@ -31,9 +34,6 @@ public interface ExpenseItemDao {
 
     @Query("SELECT MIN(price) FROM ExpenseItem WHERE category = :category")
     double getMinExpenseByCategory(String category);
-
-    @Query("SELECT COUNT(*) FROM ExpenseItem WHERE category = :category")
-    int getExpenseCountByCategory(String category);
 
     @Query("SELECT MAX(price) FROM ExpenseItem")
     double getMostExpensiveExpense();

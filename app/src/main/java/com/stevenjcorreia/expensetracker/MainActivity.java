@@ -48,9 +48,9 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
 
-// TODO - Query Room database asynchronously to avoid UI lock up
-// TODO - Sort the newly added expense automatically so user doesn't have to re-select sort from popup dialog
 public class MainActivity extends AppCompatActivity implements DatePickerDialog.OnDateSetListener {
+    private static final String TAG = MainActivity.class.getName();
+
     private static ArrayList<ExpenseItem> expenseList = new ArrayList<>();
     private Comparator<ExpenseItem> sortType = null;
     private ExpenseItemDatabase database = null;
@@ -66,8 +66,9 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (resultCode != RESULT_OK)
+        if (resultCode != RESULT_OK) {
             return;
+        }
 
         switch (requestCode) {
             case Utils.CREATE_FILE:
@@ -95,8 +96,6 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
 
                 ExpenseItemAdapter importedAdapter = new ExpenseItemAdapter(context, importedExpenses, true, null);
                 importedRecyclerView.setAdapter(importedAdapter);
-
-                System.out.println(importedExpenses.size());
 
                 assert okay != null;
                 okay.setOnClickListener(new View.OnClickListener() {
@@ -172,7 +171,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
 
                 adapter.notifyItemRemoved(position);
 
-                Snackbar snackbar = Snackbar.make(getWindow().getDecorView().getRootView(), " removed expense.", Snackbar.LENGTH_LONG);
+                Snackbar snackbar = Snackbar.make(getWindow().getDecorView().getRootView(), String.format(Locale.US, "Removed %s expense of $%.2f.", temp.getCategory(), temp.getPrice()), Snackbar.LENGTH_LONG);
                 snackbar.setAction("UNDO", new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
@@ -318,7 +317,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
 
         intent.putExtra(Intent.EXTRA_TITLE, String.format(Locale.US, "/%s_Expenses.csv", new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date())));
 
-        startActivityForResult(intent, Utils.CREATE_FILE);
+        startActivityForResult(intent, Utils.EXPORT);
     }
 
     private void getImportDirectory() {
@@ -327,7 +326,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         intent.setType("text/*");
         intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, Utils.getInitialDirectory());
 
-        startActivityForResult(Intent.createChooser(intent, "Select File"), Utils.PICK_FILE);
+        startActivityForResult(Intent.createChooser(intent, "Select File"), Utils.IMPORT);
     }
 
     private Comparator<ExpenseItem> getSortType() {
@@ -466,17 +465,15 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
                 submitDateRange.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        // TODO - Verify date range is valid
-
                         ArrayList<ExpenseItem> filteredExpenses = new ArrayList<>();
-                        Date oldest = null;
-                        Date newest = null;
+                        Date oldest, newest;
+                        oldest = newest = null;
 
                         try {
                             oldest = new SimpleDateFormat("MMM dd, yyyy", Locale.US).parse(selectFromDate.getText().toString());
                             newest = new SimpleDateFormat("MMM dd, yyyy", Locale.US).parse(selectToDate.getText().toString());
                         } catch (ParseException e) {
-                            e.printStackTrace();
+                            Log.e(TAG, "showFilterDialog: Cannot parse date(s).", e);
                         }
 
                         if (oldest.after(newest)) {
@@ -496,19 +493,18 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
                                         filteredExpenses.add(expenseList.get(i));
                                     }
                                 } catch (ParseException e) {
-                                    e.printStackTrace();
+                                    Log.e(TAG, String.format("showFilterDialog: Cannot parse date %s.", expenseList.get(i).getDate()), e);
                                 }
                             }
                         } else {
                             for (int i = 0; i < expenseList.size(); i++) {
                                 try {
                                     Date tempDate = new SimpleDateFormat("MMM dd, yyyy", Locale.US).parse(expenseList.get(i).getDate());
-                                    if ((tempDate.before(newest) || tempDate.equals(newest)) && (tempDate.after(oldest) || tempDate.equals(oldest))) { // TODO - Fix this logic
+                                    if ((tempDate.before(newest) || tempDate.equals(newest)) && (tempDate.after(oldest) || tempDate.equals(oldest))) {
                                         filteredExpenses.add(expenseList.get(i));
-                                        Log.e("DEBUG", "onClick: " + expenseList.get(i).getPrice() + " WITHIN RANGE");
                                     }
                                 } catch (ParseException e) {
-                                    e.printStackTrace();
+                                    Log.e(TAG, String.format("showFilterDialog: Cannot parse date %s.", expenseList.get(i).getDate()), e);
                                 }
                             }
                         }
@@ -600,7 +596,6 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         });
     }
 
-    // TODO - Implement shared preferences for persistence of sortType
     private void showSortDialog() {
         AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
         View view = getLayoutInflater().inflate(R.layout.dialog_sort_expense, null);
