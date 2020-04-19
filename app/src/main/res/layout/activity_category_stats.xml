@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- TODO - Fix styling -->
-<!-- TODO - Fix Hardcoded strings -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     tools:context=".CategoryStatsActivity" >
@@ -14,33 +13,33 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
-        android:text="Expenses: " />
+        android:text="@string/expenses" />
 
     <TextView
         android:id="@+id/categoryTotalPrice"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
-        android:text="Total Price: " />
+        android:text="@string/total" />
 
     <TextView
         android:id="@+id/categoryMaximumPrice"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
-        android:text="Maximum Price: " />
+        android:text="@string/maximum" />
 
     <TextView
         android:id="@+id/categoryMinimumPrice"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
-        android:text="Minimum Price: " />
+        android:text="@string/minimum" />
 
     <TextView
         android:id="@+id/categoryAveragePrice"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
-        android:text="Average Price: " />
+        android:text="@string/average" />
 </LinearLayout>

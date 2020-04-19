@@ -16,7 +16,6 @@ import java.util.Comparator;
 
 public class ExpenseItemAdapter extends RecyclerView.Adapter<ExpenseItemHolder> {
     private ArrayList<ExpenseItem> expenseItems;
-    private Comparator<ExpenseItem> sortType;
     private ExpenseItemDatabase database;
     private boolean imported;
     private Context context;
@@ -25,7 +24,6 @@ public class ExpenseItemAdapter extends RecyclerView.Adapter<ExpenseItemHolder> 
         this.context = context;
         this.expenseItems = expenseItems;
         this.imported = imported;
-        this.sortType = sortType;
 
         if (sortType != null) {
             Collections.sort(this.expenseItems, sortType);
@@ -44,6 +42,10 @@ public class ExpenseItemAdapter extends RecyclerView.Adapter<ExpenseItemHolder> 
         holder.expensePrice.setText("$".concat(String.valueOf(expenseItems.get(position).getPrice())));
         holder.expenseCategory.setText(expenseItems.get(position).getCategory());
         holder.expenseDate.setText(expenseItems.get(position).getDate());
+
+        if (!imported && expenseItems.get(position).getImage() != null) {
+            holder.expenseImage.setImageBitmap(Utils.byteArrayToBitmap(expenseItems.get(position).getImage()));
+        }
 
         if (!imported) {
             holder.setItemClickListener(new ExpenseClickListener() {
