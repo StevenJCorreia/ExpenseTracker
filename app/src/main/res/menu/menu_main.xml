@@ -49,4 +49,9 @@
         android:id="@+id/action_delete_expenses"
         android:title="@string/action_delete_expenses"
         android:orderInCategory="6" />
+
+    <item
+        android:id="@+id/action_get_expense_total"
+        android:title="@string/action_get_expense_total"
+        android:orderInCategory="7" />
 </menu>
