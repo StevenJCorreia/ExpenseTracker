@@ -29,6 +29,9 @@ public interface ExpenseItemDao {
     @Query("SELECT * FROM ExpenseItem")
     List<ExpenseItem> getExpenses();
 
+    @Query("SELECT SUM(price) FROM ExpenseItem WHERE SUBSTR(date, -4) = :year")
+    double getExpenseTotalByYear(String year);
+
     @Query("SELECT MAX(price) FROM ExpenseItem WHERE category = :category")
     double getMaxExpenseByCategory(String category);
 
@@ -43,6 +46,9 @@ public interface ExpenseItemDao {
 
     @Query("SELECT SUM(price) FROM ExpenseItem WHERE category = :category")
     double getTotalPriceByCategory(String category);
+
+    @Query("SELECT DISTINCT SUBSTR(date, -4) FROM ExpenseItem")
+    List<String> getYears();
 
     @Insert
     void insertExpenseItem(ExpenseItem item);

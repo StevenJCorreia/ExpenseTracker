@@ -6,6 +6,7 @@
     <string name="action_categories">Categories</string>
     <string name="action_delete_categories">Delete All Categories</string>
     <string name="action_delete_expenses">Delete All Expenses</string>
+    <string name="action_get_expense_total">Get Expense Total</string>
     <string name="action_sort">Sort</string>
     <string name="average">Average: </string>
     <string name="back">Back</string>

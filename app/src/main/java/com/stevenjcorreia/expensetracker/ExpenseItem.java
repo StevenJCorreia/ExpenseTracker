@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Locale;
 
+// TODO - Add description to Espense items
+// TODO - Add more robust string parser that can take on many formats (ask user for string format before parse?)
 @Entity
 public class ExpenseItem implements Serializable {
     private static final String TAG = ExpenseItem.class.getName();
@@ -227,8 +229,7 @@ public class ExpenseItem implements Serializable {
 
     private String toStringCSV() {
         return String.format(Locale.US,
-                "%d,%s,%s,%s\n",
-                this.ID,
+                "%s,%s,%s\n",
                 this.category,
                 this.date.replace(",", ""),
                 new DecimalFormat("0.00").format(this.price));

@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -201,6 +202,10 @@ public class CategoryActivity extends AppCompatActivity {
         int size = categoryList.size();
 
         switch (id) {
+            case R.id.action_back_to_expenses:
+                Log.d("DEBUG", "onOptionsItemSelected: Back button clicked!");
+                finish();
+                break;
             case R.id.action_sort:
                 if (size > 0) {
                     if (size == 1) {
@@ -209,7 +214,6 @@ public class CategoryActivity extends AppCompatActivity {
                     }
 
                     showSortDialog();
-                    Toast.makeText(context, "Feature WIP.", Toast.LENGTH_LONG).show();
                 } else {
                     Toast.makeText(context, "There are no categories to sort.", Toast.LENGTH_LONG).show();
                 }

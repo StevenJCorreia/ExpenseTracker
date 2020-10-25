@@ -10,10 +10,8 @@ import android.widget.ImageView;
 import java.io.ByteArrayOutputStream;
 
 class Utils {
-    static final int IMPORT = 1;
-    static final int EXPORT = 2;
-    static final int CREATE_FILE = 3;
-    static final int PICK_FILE = 4;
+    static final int CREATE_EXPORT_FILE = 3;
+    static final int PICK_IMPORT_FILE = 4;
     static final int TAKE_IMAGE = 5;
     static final int PICK_IMAGE = 6;
 

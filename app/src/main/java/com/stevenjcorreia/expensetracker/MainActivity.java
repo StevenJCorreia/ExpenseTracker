@@ -28,10 +28,13 @@ import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.RadioButton;
 import android.widget.SearchView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,10 +45,12 @@ import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements DatePickerDialog.OnDateSetListener {
@@ -71,11 +76,11 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         }
 
         switch (requestCode) {
-            case Utils.CREATE_FILE:
+            case Utils.CREATE_EXPORT_FILE:
                 Uri directoryPath = data != null ? data.getData() : null;
                 ExpenseItem.exportExpenses(expenseList, directoryPath, context);
                 break;
-            case Utils.PICK_FILE:
+            case Utils.PICK_IMPORT_FILE:
                 Uri filePath = data != null ? data.getData() : null;
                 final ArrayList<ExpenseItem> importedExpenses = ExpenseItem.importExpenses(filePath, context);
 
@@ -148,7 +153,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         database = Room.databaseBuilder(getApplicationContext(), ExpenseItemDatabase.class, "Expense").allowMainThreadQueries().build();
 
         recyclerView = findViewById(R.id.recyclerView);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setLayoutManager(new LinearLayoutManager(context));
 
         expenseList = (ArrayList<ExpenseItem>) database.expenseItemDao().getExpenses();
 
@@ -269,6 +274,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
                 } else {
                     Toast.makeText(context, "There are no expenses to delete.", Toast.LENGTH_LONG).show();
                 }
+
                 break;
             case R.id.action_export:
                 if (expenseList.size() > 0) {
@@ -282,6 +288,13 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
                     showFilterDialog();
                 } else {
                     Toast.makeText(context, "There are no expenses to filter.", Toast.LENGTH_LONG).show();
+                }
+                break;
+            case R.id.action_get_expense_total:
+                if (database.expenseItemDao().getExpenseCount() > 0) {
+                    showGetExpenseTotalDialog();
+                } else {
+                    Toast.makeText(context, "There are no expenses to aggregate.", Toast.LENGTH_LONG).show();
                 }
                 break;
             case R.id.action_import:
@@ -317,7 +330,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
 
         intent.putExtra(Intent.EXTRA_TITLE, String.format(Locale.US, "/%s_Expenses.csv", new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date())));
 
-        startActivityForResult(intent, Utils.EXPORT);
+        startActivityForResult(intent, Utils.CREATE_EXPORT_FILE);
     }
 
     private void getImportDirectory() {
@@ -326,7 +339,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         intent.setType("text/*");
         intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, Utils.getInitialDirectory());
 
-        startActivityForResult(Intent.createChooser(intent, "Select File"), Utils.IMPORT);
+        startActivityForResult(Intent.createChooser(intent, "Select File"), Utils.PICK_IMPORT_FILE);
     }
 
     private Comparator<ExpenseItem> getSortType() {
@@ -592,6 +605,41 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
                         dialog.dismiss();
                     }
                 });
+            }
+        });
+    }
+
+    private void showGetExpenseTotalDialog() {
+        List<String> yearsList = database.expenseItemDao().getYears();
+        final String LAST_YEAR = String.valueOf(Year.now().getValue() - 1);
+
+        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
+        View view = getLayoutInflater().inflate(R.layout.dialog_get_expense_total, null);
+
+        alertBuilder.setView(view);
+        final AlertDialog dialog = alertBuilder.create();
+        dialog.show();
+
+        final TextView expenseAnnualTotal = dialog.findViewById(R.id.expenseAnnualTotal);
+        final Spinner years = dialog.findViewById(R.id.years);
+
+        final ArrayAdapter<String> yearsAdapter = new ArrayAdapter<>(context, R.layout.support_simple_spinner_dropdown_item, yearsList);
+        yearsAdapter.setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item);
+        years.setAdapter(yearsAdapter);
+
+        int lastYearIndex = yearsList.indexOf(LAST_YEAR);
+        years.setSelection(lastYearIndex != -1 ? lastYearIndex : yearsList.size() - 1);
+
+        years.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                // TODO - Verify this actually works
+                expenseAnnualTotal.setText(String.format(Locale.US, "$%.2f", database.expenseItemDao().getExpenseTotalByYear(years.getSelectedItem().toString())));
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+                // No-op
             }
         });
     }
